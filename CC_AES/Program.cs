@@ -16,7 +16,7 @@ namespace CC_AES
 
         //help messages
         string helpLANunciph = "- For LAN L7 unciphering, please enter \"-LAN -UNCIPHER L2cipheredFrame Kmac Kenc\"";
-        string helpLANciph = "- For LAN L7 ciphering, please enter \"-LAN -CIPHER L7uncipheredFrame Kenc M-field A-field L6Cpt C-field KeyNumer(decimal)\"";
+        string helpLANciph = "- For LAN L7 ciphering, please enter \"-LAN -CIPHER L7uncipheredFrame Kenc M-field A-field L6Cpt C-field KeyNumber(decimal)\"";
         string helpNFCunciph = "- For NFC unciphering, please enter \"-NFC -UNCIPHER NFCcipheredFrame Kmob NFCUID\"";
         string helpDebug = "- You can enter DEBUG mode by adding \"-DEBUG\" at the end of the command e.g: \"-LAN L2InputFrame Kmac Kenc -DEBUG\"";
         
