@@ -58,6 +58,13 @@ namespace CC_AES
                             break;
                     }
                     break;
+                case "-CIPH":
+                    {
+                        System.Console.WriteLine("DATA Ciphering");
+                        DATAcipher(args, DEBUG);
+                    }
+                    break;
+
                 case "-HELP":
                     System.Console.WriteLine(helpLANunciph + Environment.NewLine + helpLANciph + Environment.NewLine + helpNFCunciph + Environment.NewLine + helpDebug);
                     break;
@@ -69,6 +76,20 @@ namespace CC_AES
         }
      
             
+        }
+
+        private static void DATAcipher(string[] args, bool DEBUG)
+        {
+            string data = args[1];
+            byte[] kencbytes = Hex2Bytes(args[2].Substring(0, 32));
+            string IV = (args[3].ToString().PadRight(32, '0'));
+                       
+            //chiffrement 
+            byte[] DATAcipheredbytes = CAES128.AES_CTR(Hex2Bytes(data), kencbytes, Hex2Bytes(IV));
+            string DATAciphered = Bytes2Hex(DATAcipheredbytes, DATAcipheredbytes.Length);
+            //System.Console.WriteLine("LAN L7 ciphered: " + l7ciphered);
+
+            System.Console.WriteLine("CipheredData " + DATAciphered);
         }
 
         private static void LANuncipher(string[] args, bool DEBUG)
