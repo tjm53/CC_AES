@@ -215,14 +215,18 @@ namespace CC_AES
                 string NFCinputhashkmob = (NFCuid.ToString() + NFCLfield.ToString() + NFCcpt.ToString() + NFCCfield.ToString() + NFCNFCver.ToString() + NFCdata.ToString());
 
                 string NFChashkmobcomputed = Bytes2Hex(CAES128.AES_CMAC(Hex2Bytes(NFCinputhashkmob), kmobbytes), 4);
-                //System.Console.WriteLine("NFChashkmobcomputed " + NFChashkmobcomputed.ToString().ToUpper());
+                if (DEBUG) { System.Console.WriteLine("NFChashkmobcomputed " + NFChashkmobcomputed.ToString().ToUpper() + " NFChashkmob_inframe " + NFChashkmob); }
+                
 
                 if (NFChashkmobcomputed.ToString().ToUpper() == NFChashkmob)
                 {
                     //déchiffrement
                     //calcul IV
+
+
                     string NFCIV = (NFCuid.ToString() + NFCcpt.ToString()).PadRight(32, '0');
-                    //System.Console.WriteLine("NFCIV " + NFCIV);
+                    if (DEBUG) { System.Console.WriteLine("NFCIV: " + NFCIV); }
+
 
                     byte[] NFCdecipheredbytes = CAES128.AES_CTR(Hex2Bytes(NFCdata), kmobbytes, Hex2Bytes(NFCIV));
                     string NFCl7deciphered = Bytes2Hex(NFCdecipheredbytes, NFCdecipheredbytes.Length);
@@ -293,7 +297,7 @@ namespace CC_AES
                     //vérification du CRC calculé et du CRC de la trame
                     if (lblCRCcomputed.ToString().ToUpper().PadLeft(4, '0') == lblCRC.ToString().ToUpper())
                     {
-                        if (DEBUG) { System.Console.WriteLine(Environment.NewLine + "CRC OK" + "CRC computed = " + lblCRCcomputed + " CRC in frame = " + lblCRC); }
+                        if (DEBUG) { System.Console.WriteLine(Environment.NewLine + "CRC OK" + " CRC computed = " + lblCRCcomputed + " CRC in frame = " + lblCRC); }
                         return true;
                     }
                     else
@@ -326,7 +330,7 @@ namespace CC_AES
             else
             {
                 System.Console.WriteLine("Error hashKmac: hashKmac computed = " + lblL6HashKmaccomputed + " hashKmac in frame = " + lblL6HashKmac);
-                return false;
+                if (DEBUG) { return true; } else { return false;  }
 
             }
 
@@ -377,7 +381,7 @@ namespace CC_AES
             else
             {
                 System.Console.WriteLine("Error hashKenc: hashKenc computed = " + lblL6HashKenccomputed + " hashKenc in frame = " + lblL6HashKenc);
-                return false;
+                if (DEBUG) { return true; } else { return false; }
             }
 
                 
