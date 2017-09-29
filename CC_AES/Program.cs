@@ -108,7 +108,7 @@ namespace CC_AES
             //string lblL6KeySel = l6ctrl.Substring(4, 4);
             //system.Console.WriteLine("Clé n° : " + Convert.ToInt32(lblL6KeySel.ToString(), 2).ToString());
 
-            if (lblL6Vers == "000") // la seule version supportée du protocole LAN est "000"
+            if (lblL6Vers == "001") // la seule version supportée du protocole LAN est "000"
             {
                 //Décodage trame
                 string lblMField = input_frame.Substring(4, 4);
@@ -278,6 +278,17 @@ namespace CC_AES
   
             string lblCRC = input_frame.Substring(input_frame.Length - 4, 4);
 
+
+            string CRC_test = "3f44ae4c780700001007b4210000054e9b9df53f1da82bf80e3a408334fc2d4487db6ccb10934908cbe570baba57aabe789d3e30c4a60c9d2bbdad27f2c7";
+            byte[] CRC_testinputbytes = Hex2Bytes(CRC_test);
+           // byte[] CRC_testinputbytes = ASCIIEncoding.ASCII.GetBytes("ABCD");
+            short CRC_testcomputed = CLibCRC.CalculateCRC16EN13757(CRC_testinputbytes);
+            string lblCRC_testcomputed = CRC_testcomputed.ToString("X2");
+            System.Console.WriteLine(Environment.NewLine + "CRC TEST" + " CRC_test = " + CRC_test + " lblCRC_testcomputed = " + lblCRC_testcomputed);
+
+
+
+
             //Si le CRC a été forcé à 0 (trame issu de flux WAN)
             if (lblCRC == "0000")
             {
@@ -297,7 +308,12 @@ namespace CC_AES
                     //vérification du CRC calculé et du CRC de la trame
                     if (lblCRCcomputed.ToString().ToUpper().PadLeft(4, '0') == lblCRC.ToString().ToUpper())
                     {
-                        if (DEBUG) { System.Console.WriteLine(Environment.NewLine + "CRC OK" + " CRC computed = " + lblCRCcomputed + " CRC in frame = " + lblCRC); }
+                        if (DEBUG) { System.Console.WriteLine(Environment.NewLine + "CRC OK" + " CRC computed = " + lblCRCcomputed + " CRC in frame = " + lblCRC);
+
+
+
+                        
+                        }
                         return true;
                     }
                     else
