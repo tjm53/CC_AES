@@ -93,7 +93,7 @@ namespace CC_AES
                 case "-CIPH":
                     {
                         System.Console.WriteLine("DATA Ciphering");
-                        DATAcipher(args, DEBUG);
+                        NFCDATAcipher(args, DEBUG);
                     }
                     break;
 
@@ -110,7 +110,7 @@ namespace CC_AES
             
         }
 
-        private static void DATAcipher(string[] args, bool DEBUG)
+        private static void NFCDATAcipher(string[] args, bool DEBUG)
         {
             string data = args[1];
             byte[] kencbytes = Hex2Bytes(args[2].Substring(0, 32));
@@ -515,7 +515,7 @@ namespace CC_AES
                 string l6ctrl = Convert.ToString(byte.Parse(l6.Substring(0, 2), System.Globalization.NumberStyles.HexNumber), 2).PadLeft(8, '0');
                 string lblL6Wts = l6ctrl.Substring(3, 1);
 
-                System.Console.WriteLine(" l6 = " + l6 + " l6ctrl = " + l6ctrl + " lblL6Wts = " + lblL6Wts);
+                if (DEBUG) { System.Console.WriteLine(" l6 = " + l6 + " l6ctrl = " + l6ctrl + " lblL6Wts = " + lblL6Wts); }
 
                 //si L6TStamp présent
                 if (lblL6Wts.ToString() == "1")
@@ -559,13 +559,11 @@ namespace CC_AES
                 //calcul du hashKenc à partir de la trame
                 lblL6HashKenc = input_frame.Substring(input_frame.Length - 20, 8);
 
-                //System.Console.WriteLine(" lblL6HashKenc " + lblL6HashKenc);
-
-                //System.Console.WriteLine(" input_frame.Length " + input_frame.Length);
+                if (DEBUG) { System.Console.WriteLine(" lblL6HashKenc " + lblL6HashKenc); }
 
                 string L7 = input_frame.Substring(32, input_frame.Length - 52); //L7
 
-                //System.Console.WriteLine(" L7 " + L7);
+                if (DEBUG) { System.Console.WriteLine(" L7 " + L7); }
 
                 string lblMField = input_frame.Substring(4, 4);
                 string lblAField = input_frame.Substring(8, 12);
