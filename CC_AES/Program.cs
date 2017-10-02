@@ -18,7 +18,7 @@ namespace CC_AES
         string helpLANunciph = "- For LAN L7 unciphering, please enter \"-LAN -UNCIPHER L6Vers(000 or 001) L2cipheredFrame Kmac Kenc\"";
 
         string helpLANciphV0 = "- For LAN L2 ciphering LAN protocol version 000, please enter \"-LAN -CIPHER L6Vers(000) L7uncipheredFrame Kenc M-field A-field L6Cpt C-field KeyNumber(decimal)\"";
-        string helpLANciphV1 = "- For LAN L2 ciphering LAN protocol version 001, please enter \"-LAN -CIPHER L6Vers(000) L7uncipheredFrame(MSB) Kenc(MSB) M-field(LSB) A-field(LSB) L6Cpt C-field KeyNumber(decimal) L6OprID L6App CI-field\"";
+        string helpLANciphV1 = "- For LAN L2 ciphering LAN protocol version 001, please enter \"-LAN -CIPHER L6Vers(001) L7uncipheredFrame(MSB) Kenc(MSB) M-field(LSB) A-field(LSB) L6Cpt C-field KeyNumber(decimal) L6OprID L6App CI-field\"";
 
         string helpNFCunciph = "- For NFC unciphering, please enter \"-NFC -UNCIPHER NFCcipheredFrame Kmob NFCUID\"";
         string helpDebug = "- You can enter DEBUG mode by adding \"-DEBUG\" at the end of the command e.g: \"-LAN L2InputFrame Kmac Kenc -DEBUG\"";
@@ -150,7 +150,7 @@ namespace CC_AES
                 string lblL6Cpt = l6.Substring(2, 4);
                 string lblL6HashKmac = l6.Substring(l6.Length - 4, 4);
 
-                if (CRC_OK(input_frame, DEBUG) && hashKmac_OK(input_frame, kmacbytes, DEBUG) && hashKenc_OK(input_frame, kencbytes, DEBUG))
+                if (CRC_OK(input_frame, DEBUG) && hashKmac_OK(input_frame, kmacbytes, lblL6Vers, DEBUG) && hashKenc_OK(input_frame, kencbytes, lblL6Vers, DEBUG))
                 {
 
                     string l7 = (lblL6Wts.ToString() == "1") ? l6.Substring(6, l6.Length - 22) : l6.Substring(6, l6.Length - 18);
@@ -179,23 +179,25 @@ namespace CC_AES
             string l6ctrl = Convert.ToString(byte.Parse(l6.Substring(0, 2), System.Globalization.NumberStyles.HexNumber), 2).PadLeft(8, '0');
             string lblL6Vers = l6ctrl.Substring(0, 3);
             string lblL6Wts = l6ctrl.Substring(3, 1);
-            //string lblL6KeySel = l6ctrl.Substring(4, 4);
+            string lblL6KeySel = l6ctrl.Substring(4, 4);
             //system.Console.WriteLine("Clé n° : " + Convert.ToInt32(lblL6KeySel.ToString(), 2).ToString());
               
                 //Décodage trame
+                int cfield = Int32.Parse(input_frame.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
+                string lblCField = cfield.ToString("X2");
                 string lblMField = input_frame.Substring(4, 4);
                 string lblAField = input_frame.Substring(8, 12);
                 string lblClField = input_frame.Substring(20, 2);
-                int cfield = Int32.Parse(input_frame.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
-                string lblCField = cfield.ToString("X2");
 
-                string lblL6Cpt = l6.Substring(2, 4);
+                string lblL6OprID = l6.Substring(2, 2);
+                string lblL6Cpt = l6.Substring(4, 4);
+                string lblL6App = l6.Substring(8, 2);
                 string lblL6HashKmac = l6.Substring(l6.Length - 4, 4);
 
-                if (CRC_OK(input_frame, DEBUG) && hashKmac_OK(input_frame, kmacbytes, DEBUG) && hashKenc_OK(input_frame, kencbytes, DEBUG))
+                if (CRC_OK(input_frame, DEBUG) && hashKmac_OK(input_frame, kmacbytes, lblL6Vers, DEBUG) && hashKenc_OK(input_frame, kencbytes, lblL6Vers, DEBUG))
                 {
 
-                    string l7 = (lblL6Wts.ToString() == "1") ? l6.Substring(6, l6.Length - 22) : l6.Substring(6, l6.Length - 18);
+                    string l7 = l6.Substring(10, l6.Length - 26);
 
                     string txtIV = (lblMField.ToString() + lblAField.ToString() + lblL6Cpt.ToString() + lblCField.ToString()).PadRight(32, '0');
 
@@ -209,7 +211,7 @@ namespace CC_AES
             
             else
             {
-                System.Console.WriteLine("LAN protocol not supported. Supported version is 000, L6Vers in frame = " + lblL6Vers);
+                System.Console.WriteLine("Frame unciphering error");
             }
         }
 
@@ -439,82 +441,163 @@ namespace CC_AES
                 }
             }
 
-        private static bool hashKmac_OK(string input_frame, byte[] kmacbytes, bool DEBUG)
+        private static bool hashKmac_OK(string input_frame, byte[] kmacbytes, string lblL6Vers, bool DEBUG)
         {
+
             //hashKmac de la trame
             string l6 = input_frame.Substring(22, input_frame.Length - 26);
             string lblL6HashKmac = l6.Substring(l6.Length - 4, 4);
-            
-            //calcul du hashKmac à partir de la trame
-            string Cmacinput = input_frame.Substring(0, input_frame.Length - 8);
-            byte[] Cmacinputbytes = Hex2Bytes(Cmacinput);
-            string lblL6HashKmaccomputed = Bytes2Hex(CAES128.AES_CMAC(Cmacinputbytes, kmacbytes), 2);
 
-            if (DEBUG) System.Console.WriteLine(Environment.NewLine + "full hashKmac computed = " + Bytes2Hex(CAES128.AES_CMAC(Cmacinputbytes, kmacbytes), 16));
-
-            if (lblL6HashKmaccomputed.ToString().ToUpper() == lblL6HashKmac.ToString().ToUpper())
+            if (lblL6Vers == "000")
             {
-                if (DEBUG) { System.Console.WriteLine("hashKmac computed = " + lblL6HashKmaccomputed + " hashKmac in frame = " + lblL6HashKmac + Environment.NewLine + "hashKmac OK");}    
-                return true;
+                //calcul du hashKmac à partir de la trame
+                string Cmacinput = input_frame.Substring(0, input_frame.Length - 8);
+                byte[] Cmacinputbytes = Hex2Bytes(Cmacinput);
+                string lblL6HashKmaccomputed = Bytes2Hex(CAES128.AES_CMAC(Cmacinputbytes, kmacbytes), 2);
+
+                if (DEBUG) System.Console.WriteLine(Environment.NewLine + "full hashKmac computed = " + Bytes2Hex(CAES128.AES_CMAC(Cmacinputbytes, kmacbytes), 16));
+
+                if (lblL6HashKmaccomputed.ToString().ToUpper() == lblL6HashKmac.ToString().ToUpper())
+                {
+                    if (DEBUG) { System.Console.WriteLine("hashKmac computed = " + lblL6HashKmaccomputed + " hashKmac in frame = " + lblL6HashKmac + Environment.NewLine + "hashKmac OK"); }
+                    return true;
+                }
+                else
+                {
+                    System.Console.WriteLine("Error hashKmac: hashKmac computed = " + lblL6HashKmaccomputed + " hashKmac in frame = " + lblL6HashKmac);
+                    if (DEBUG) { return true; } else { return false; }
+
+                }
+            }
+
+            else if (lblL6Vers == "001")
+            {
+                //calcul du hashKmac à partir de la trame
+                string lblMField = input_frame.Substring(4, 4);
+                string lblAField = input_frame.Substring(8, 12);
+                string block0 = lblMField + lblAField + "0000000000000000";
+
+                string Cmacinput = block0 + l6.Substring(0, l6.Length - 4);
+                byte[] Cmacinputbytes = Hex2Bytes(Cmacinput);
+                string lblL6HashKmaccomputed = Bytes2Hex(CAES128.AES_CMAC(Cmacinputbytes, kmacbytes), 2);
+
+                if (DEBUG) System.Console.WriteLine(Environment.NewLine + "full hashKmac computed = " + Bytes2Hex(CAES128.AES_CMAC(Cmacinputbytes, kmacbytes), 16));
+
+                if (lblL6HashKmaccomputed.ToString().ToUpper() == lblL6HashKmac.ToString().ToUpper())
+                {
+                    if (DEBUG) { System.Console.WriteLine("hashKmac computed = " + lblL6HashKmaccomputed + " hashKmac in frame = " + lblL6HashKmac + Environment.NewLine + "hashKmac OK"); }
+                    return true;
+                }
+                else
+                {
+                    System.Console.WriteLine("Error hashKmac: hashKmac computed = " + lblL6HashKmaccomputed + " hashKmac in frame = " + lblL6HashKmac);
+                    if (DEBUG) { return true; } else { return false; }
+
+                }
             }
             else
             {
-                System.Console.WriteLine("Error hashKmac: hashKmac computed = " + lblL6HashKmaccomputed + " hashKmac in frame = " + lblL6HashKmac);
-                if (DEBUG) { return true; } else { return false;  }
-
+                return false;
             }
-
-                      
+                                              
         }
 
-        private static bool hashKenc_OK(string input_frame, byte[] kencbytes, bool DEBUG)
+        private static bool hashKenc_OK(string input_frame, byte[] kencbytes, string lblL6Vers, bool DEBUG)
         {
             //hashKenc de la trame
             string lblL6HashKenc;
             string Cencinput = "";
-            string l6 = input_frame.Substring(22, input_frame.Length - 26);
-            string l6ctrl = Convert.ToString(byte.Parse(l6.Substring(0, 2), System.Globalization.NumberStyles.HexNumber), 2).PadLeft(8, '0');
-            string lblL6Wts = l6ctrl.Substring(3, 1);
 
-           // System.Console.WriteLine(" l6 = " + l6 + " l6ctrl = " + l6ctrl + " lblL6Wts = " + lblL6Wts);
-
-            //si L6TStamp présent
-            if (lblL6Wts.ToString() == "1")
+           
+            if (lblL6Vers == "000")
             {
-                //lblL6TStamp = l6.Substring(l6.Length - 8, 4);
-                lblL6HashKenc = l6.Substring(l6.Length - 16, 8);
-                Cencinput = input_frame.Substring(0, input_frame.Length - 20);
-              }
-            //si L6Tstamp absent
-            else
+                string l6 = input_frame.Substring(22, input_frame.Length - 26);
+                string l6ctrl = Convert.ToString(byte.Parse(l6.Substring(0, 2), System.Globalization.NumberStyles.HexNumber), 2).PadLeft(8, '0');
+                string lblL6Wts = l6ctrl.Substring(3, 1);
+
+                System.Console.WriteLine(" l6 = " + l6 + " l6ctrl = " + l6ctrl + " lblL6Wts = " + lblL6Wts);
+
+                //si L6TStamp présent
+                if (lblL6Wts.ToString() == "1")
+                {
+                    //lblL6TStamp = l6.Substring(l6.Length - 8, 4);
+                    lblL6HashKenc = l6.Substring(l6.Length - 16, 8);
+                    Cencinput = input_frame.Substring(0, input_frame.Length - 20);
+                }
+                //si L6Tstamp absent
+                else
+                {
+                    //lblL6TStamp = "";
+                    lblL6HashKenc = l6.Substring(l6.Length - 12, 8);
+                    Cencinput = input_frame.Substring(0, input_frame.Length - 16);
+                }
+
+                // System.Console.WriteLine("Cencinput = " + Cencinput + " lblL6HashKenc = " + lblL6HashKenc);
+
+
+                //calcul du hashKenc à partir de la trame
+                byte[] Cencinputbytes = Hex2Bytes(Cencinput);
+                string lblL6HashKenccomputed = Bytes2Hex(CAES128.AES_CMAC(Cencinputbytes, kencbytes), 4);
+
+                if (DEBUG) System.Console.WriteLine(Environment.NewLine + "full hashKenc computed = " + Bytes2Hex(CAES128.AES_CMAC(Cencinputbytes, kencbytes), 16));
+
+                if (lblL6HashKenccomputed.ToString().ToUpper() == lblL6HashKenc.ToString().ToUpper())
+                {
+                    if (DEBUG) { System.Console.WriteLine("hashKenc computed = " + lblL6HashKenccomputed + " hashKenc in frame = " + lblL6HashKenc + Environment.NewLine + "hashKenc OK" + Environment.NewLine); }
+
+                    return true;
+                }
+                else
+                {
+                    System.Console.WriteLine("Error hashKenc: hashKenc computed = " + lblL6HashKenccomputed + " hashKenc in frame = " + lblL6HashKenc);
+                    if (DEBUG) { return true; } else { return false; }
+                }
+
+            }  
+            else if (lblL6Vers == "001")
             {
-                //lblL6TStamp = "";
-                lblL6HashKenc = l6.Substring(l6.Length - 12, 8);
-                Cencinput = input_frame.Substring(0, input_frame.Length - 16);
-            }
+                //calcul du hashKenc à partir de la trame
+                lblL6HashKenc = input_frame.Substring(input_frame.Length - 20, 8);
 
-           // System.Console.WriteLine("Cencinput = " + Cencinput + " lblL6HashKenc = " + lblL6HashKenc);
+                //System.Console.WriteLine(" lblL6HashKenc " + lblL6HashKenc);
 
+                //System.Console.WriteLine(" input_frame.Length " + input_frame.Length);
 
-            //calcul du hashKenc à partir de la trame
-            byte[] Cencinputbytes = Hex2Bytes(Cencinput);
-            string lblL6HashKenccomputed = Bytes2Hex(CAES128.AES_CMAC(Cencinputbytes, kencbytes), 4);
+                string L7 = input_frame.Substring(32, input_frame.Length - 52); //L7
 
-            if (DEBUG) System.Console.WriteLine(Environment.NewLine + "full hashKenc computed = " + Bytes2Hex(CAES128.AES_CMAC(Cencinputbytes, kencbytes), 16));
+                //System.Console.WriteLine(" L7 " + L7);
 
-            if (lblL6HashKenccomputed.ToString().ToUpper() == lblL6HashKenc.ToString().ToUpper())
-            {
-                if (DEBUG) { System.Console.WriteLine("hashKenc computed = " + lblL6HashKenccomputed + " hashKenc in frame = " + lblL6HashKenc + Environment.NewLine + "hashKenc OK" + Environment.NewLine); }        
-      
-                return true;
-            }
-            else
-            {
-                System.Console.WriteLine("Error hashKenc: hashKenc computed = " + lblL6HashKenccomputed + " hashKenc in frame = " + lblL6HashKenc);
-                if (DEBUG) { return true; } else { return false; }
-            }
+                string lblMField = input_frame.Substring(4, 4);
+                string lblAField = input_frame.Substring(8, 12);
+                string lblL6Cpt = input_frame.Substring(26, 4);
 
+                string block0 = lblMField + lblAField + lblL6Cpt + "000000000000";
+
+                Cencinput = block0 + L7;
                 
+                byte[] Cencinputbytes = Hex2Bytes(Cencinput);
+                string lblL6HashKenccomputed = Bytes2Hex(CAES128.AES_CMAC(Cencinputbytes, kencbytes), 4);
+
+                if (DEBUG) System.Console.WriteLine(Environment.NewLine + "full hashKenc computed = " + Bytes2Hex(CAES128.AES_CMAC(Cencinputbytes, kencbytes), 16));
+
+                if (lblL6HashKenccomputed.ToString().ToUpper() == lblL6HashKenc.ToString().ToUpper())
+                {
+                    if (DEBUG) { System.Console.WriteLine("hashKenc computed = " + lblL6HashKenccomputed + " hashKenc in frame = " + lblL6HashKenc + Environment.NewLine + "hashKenc OK" + Environment.NewLine); }
+
+                    return true;
+                }
+                else
+                {
+                    System.Console.WriteLine("Error hashKenc: hashKenc computed = " + lblL6HashKenccomputed + " hashKenc in frame = " + lblL6HashKenc);
+                    if (DEBUG) { return true; } else { return false; }
+                }
+
+
+            }
+            else
+            { 
+                return false;
+            }
         }
 
         }
