@@ -10,7 +10,7 @@ namespace CC_AES
 
     class Program
     {
-        //test
+        //test args
         static void Main(string[] args)
         {
 
