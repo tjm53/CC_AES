@@ -150,6 +150,7 @@ namespace CC_AES
                 string lblL6Cpt = l6.Substring(2, 4);
                 string lblL6HashKmac = l6.Substring(l6.Length - 4, 4);
 
+                
                 if (CRC_OK(input_frame, DEBUG) && hashKmac_OK(input_frame, kmacbytes, lblL6Vers, DEBUG) && hashKenc_OK(input_frame, kencbytes, lblL6Vers, DEBUG))
                 {
 
@@ -478,6 +479,9 @@ namespace CC_AES
                 string block0 = lblMField + lblAField + "0000000000000000";
 
                 string Cmacinput = block0 + l6.Substring(0, l6.Length - 4);
+
+                if (DEBUG) System.Console.WriteLine("full Cmacinput in frame = " + Cmacinput);
+
                 byte[] Cmacinputbytes = Hex2Bytes(Cmacinput);
                 string lblL6HashKmaccomputed = Bytes2Hex(CAES128.AES_CMAC(Cmacinputbytes, kmacbytes), 2);
 
@@ -490,7 +494,7 @@ namespace CC_AES
                 }
                 else
                 {
-                    System.Console.WriteLine("Error hashKmac: hashKmac computed = " + lblL6HashKmaccomputed + " hashKmac in frame = " + lblL6HashKmac);
+                    System.Console.WriteLine("Error hashKmac: hashKmac computed = " + lblL6HashKmaccomputed + " hashKmac in frame = " + lblL6HashKmac + Environment.NewLine);
                     if (DEBUG) { return true; } else { return false; }
 
                 }
@@ -559,11 +563,7 @@ namespace CC_AES
                 //calcul du hashKenc à partir de la trame
                 lblL6HashKenc = input_frame.Substring(input_frame.Length - 20, 8);
 
-                if (DEBUG) { System.Console.WriteLine(" lblL6HashKenc " + lblL6HashKenc); }
-
                 string L7 = input_frame.Substring(32, input_frame.Length - 52); //L7
-
-                if (DEBUG) { System.Console.WriteLine(" L7 " + L7); }
 
                 string lblMField = input_frame.Substring(4, 4);
                 string lblAField = input_frame.Substring(8, 12);
@@ -572,11 +572,13 @@ namespace CC_AES
                 string block0 = lblMField + lblAField + lblL6Cpt + "000000000000";
 
                 Cencinput = block0 + L7;
-                
+
+                if (DEBUG) System.Console.WriteLine("full Cencinput in frame = " + Cencinput);
+
                 byte[] Cencinputbytes = Hex2Bytes(Cencinput);
                 string lblL6HashKenccomputed = Bytes2Hex(CAES128.AES_CMAC(Cencinputbytes, kencbytes), 4);
 
-                if (DEBUG) System.Console.WriteLine(Environment.NewLine + "full hashKenc computed = " + Bytes2Hex(CAES128.AES_CMAC(Cencinputbytes, kencbytes), 16));
+                if (DEBUG) System.Console.WriteLine("full hashKenc computed = " + Bytes2Hex(CAES128.AES_CMAC(Cencinputbytes, kencbytes), 16));
 
                 if (lblL6HashKenccomputed.ToString().ToUpper() == lblL6HashKenc.ToString().ToUpper())
                 {
