@@ -18,7 +18,7 @@ namespace CC_AES
         string helpLANunciph = "- For LAN L7 unciphering, please enter \"-LAN -UNCIPHER L6Vers(000 or 001) L2cipheredFrame Kmac Kenc\"";
 
         string helpLANciphV0 = "- For LAN L2 ciphering LAN protocol version 000, please enter \"-LAN -CIPHER L6Vers(000) L7uncipheredFrame Kenc M-field A-field L6Cpt C-field KeyNumber(decimal)\"";
-        string helpLANciphV1 = "- For LAN L2 ciphering LAN protocol version 001, please enter \"-LAN -CIPHER L6Vers(001) L7uncipheredFrame(MSB) Kenc(MSB) M-field(LSB) A-field(LSB) L6Cpt C-field KeyNumber(decimal) L6OprID L6App CI-field\"";
+        string helpLANciphV1 = "- For LAN L2 ciphering LAN protocol version 001, please enter \"-LAN -CIPHER L6Vers(001) L7uncipheredFrame(MSB) Kenc(MSB) M-field(LSB) A-field(LSB) L6Cpt C-field KeyNumber(decimal) L6OprID L6App CI-field L6Tstamp Kmac(MSB)\"";
 
         string helpNFCunciph = "- For NFC unciphering, please enter \"-NFC -UNCIPHER NFCcipheredFrame Kmob NFCUID\"";
         string helpDebug = "- You can enter DEBUG mode by adding \"-DEBUG\" at the end of the command e.g: \"-LAN L2InputFrame Kmac Kenc -DEBUG\"";
@@ -106,8 +106,7 @@ namespace CC_AES
             }
 
         }
-     
-            
+               
         }
 
         private static void NFCDATAcipher(string[] args, bool DEBUG)
@@ -167,6 +166,7 @@ namespace CC_AES
                 }
    
         }
+
         private static void LANuncipherV1(string[] args, bool DEBUG)
         {
             //conversion des arguments
@@ -258,12 +258,14 @@ namespace CC_AES
             string L2 = lblLField + lblCField + lblMField + lblAField + lblCIField + lblL6Ctrl + lblL6Cpt + l7ciphered + lblL6HashKenc + lblL6Tstamp + lblL6HashKmac + CRC;
             System.Console.WriteLine("L2 " + L2);
         }
+
         private static void LANcipherV1(string[] args, bool DEBUG)
         {
             string lblCField = args[8];
             string lblMField = args[5];
             string lblAField = args[6];
             string lblCIField = args[12]; //"B4";  imposée par la LAN
+                     
 
             string lblL6Vers = args[2];
             string lblL6Wts = "0"; //champs reserved du L6Ctrl fixé à 0
@@ -273,16 +275,17 @@ namespace CC_AES
             string lblL6OprID = args[10];
             string lblL6Cpt = args[7];
             string lblL6App = args[11];
-
+            
             string l7 = args[3];
 
             string lblL6HashKenc = "00000000"; //recalcule après
-            string lblL6Tstamp = "0000"; //recalculé par le K
+            string lblL6Tstamp = args[13];
+            //string lblL6Tstamp = "0000"; //recalculé par le K
             string lblL6HashKmac = "0000"; //recalculé par le K
             string CRC = "0000"; //recalculé par le K
 
             byte[] kencbytes = Hex2Bytes(args[4].Substring(0, 32));
- 
+            byte[] kmacbytes = Hex2Bytes(args[14].Substring(0, 32));
             
             //System.Console.WriteLine("l7: " + l7 + Environment.NewLine + "lblMField: " + lblMField + Environment.NewLine + "lblAField: " + lblAField + Environment.NewLine + "lblL6Cpt: " + lblL6Cpt + Environment.NewLine + "lblCField: " + lblCField + Environment.NewLine + "l7: " + l7 + Environment.NewLine);
 
@@ -296,16 +299,31 @@ namespace CC_AES
 
             if (DEBUG) { System.Console.WriteLine("LAN L7 ciphered: " + l7ciphered); }
             
-
-
+            
             //L-field
             Int32 lfield_calc = 1 + 2 + 6 + 1 + 1 + 1 + 2 + 1 + l7.Length / 2 + 4 + lblL6Tstamp.Length / 2 + 2 + 2; // longeur de la trame du C-field au CRC inclu
             string lblLField = lfield_calc.ToString("X2");
 
             //L6HashKenc
-            string block0 = lblMField + lblAField + lblL6Cpt + "000000000000";
-            lblL6HashKenc = Bytes2Hex(CAES128.AES_CMAC(Hex2Bytes(block0 + l7ciphered), kencbytes), 4);
-            if (DEBUG) { System.Console.WriteLine("lblL6HashKenc " + lblL6HashKenc); } 
+            string block0Kenc = lblMField + lblAField + lblL6Cpt + "000000000000";
+            lblL6HashKenc = Bytes2Hex(CAES128.AES_CMAC(Hex2Bytes(block0Kenc + l7ciphered), kencbytes), 4);
+            if (DEBUG) { System.Console.WriteLine("lblL6HashKenc " + lblL6HashKenc); }
+
+            //L6HashKmac
+            string HashKmacInput = lblL6Ctrl + lblL6OprID + lblL6Cpt + lblL6App + l7ciphered + lblL6HashKenc + lblL6Tstamp;
+            string block0Kmac = lblMField + lblAField + "0000000000000000";
+            string Cmacinput = block0Kmac + HashKmacInput;
+            if (DEBUG) System.Console.WriteLine("full Cmacinput  = " + Cmacinput);
+            byte[] Cmacinputbytes = Hex2Bytes(Cmacinput);
+            lblL6HashKmac = Bytes2Hex(CAES128.AES_CMAC(Cmacinputbytes, kmacbytes), 2);
+            if (DEBUG) System.Console.WriteLine("lblL6HashKmac  = " + lblL6HashKmac);
+
+            //CRC
+            string CRCinput = lblLField + lblCField + lblMField + lblAField + lblCIField + lblL6Ctrl + lblL6OprID + lblL6Cpt + lblL6App + l7ciphered + lblL6HashKenc + lblL6Tstamp + lblL6HashKmac;
+            byte[] CRCinputbytes = Hex2Bytes(CRCinput);
+            short CRCcomputed = CLibCRC.CalculateCRC16EN13757(CRCinputbytes);
+            CRC = CRCcomputed.ToString("X2");
+            if (DEBUG) System.Console.WriteLine("CRC computed  = " + CRC);
 
             string L2 = lblLField + lblCField + lblMField + lblAField + lblCIField + lblL6Ctrl + lblL6OprID + lblL6Cpt + lblL6App + l7ciphered + lblL6HashKenc + lblL6Tstamp + lblL6HashKmac + CRC;
             System.Console.WriteLine("L2 " + L2);
